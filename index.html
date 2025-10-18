@@ -2,92 +2,89 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Brainrot Parkour</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
+  <title>brainrot parkour</title>
   <style>
-    /* General */
     html, body {
       margin: 0;
       padding: 0;
       height: 100%;
       background: #000;
-      color: #fff;
-      font-family: Arial, sans-serif;
       overflow: hidden;
     }
-
-    #unityContainer {
+    #unity-canvas {
       width: 100%;
       height: 100%;
-      background: #000;
-    }
-
-    /* Pantalla de carga */
-    #loadingBox {
+      display: block;
       position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: #111;
-      z-index: 10;
+      top: 0;
+      left: 0;
+      z-index: 0; /* el juego abajo */
     }
-
-    #progressBarEmpty {
-      width: 80%;
-      height: 20px;
-      border: 1px solid #fff;
-      margin-top: 20px;
-      background: #333;
+    /* Caja del slider arriba a la derecha */
+    #sens-box {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      z-index: 9999; /* bien arriba del canvas */
+      background: rgba(0,0,0,0.7);
+      color: #fff;
+      padding: 10px;
+      border-radius: 10px;
+      font-family: sans-serif;
+      font-size: 14px;
     }
-
-    #progressBarFull {
-      height: 100%;
-      width: 0%;
-      background: #00ff88;
+    #sens-box input[type=range] {
+      width: 150px;
     }
   </style>
-
-  <!-- Cargamos UnityLoader -->
-  <script src="UnityLoader.js"></script>
 </head>
 <body>
-  <!-- Contenedor del juego -->
-  <div id="unityContainer"></div>
+  <!-- Canvas del juego -->
+  <canvas id="unity-canvas"></canvas>
 
-  <!-- Pantalla de carga -->
-  <div id="loadingBox">
-    <h2>Cargando Brainrot Parkour...</h2>
-    <div id="progressBarEmpty">
-      <div id="progressBarFull"></div>
-    </div>
+  <!-- Caja de sensibilidad -->
+  <div id="sens-box">
+    Sensibilidad:<br>
+    <input type="range" id="sensSlider" min="0.1" max="5" step="0.1" value="1">
   </div>
 
   <script>
-    // Ruta base (mismo folder donde están los archivos .unityweb y .js)
-    var buildUrl = "./";
+    const buildUrl = "."; 
+    const loaderUrl = buildUrl + "/UnityLoader.js";
 
-    // Inicializamos Unity
-    var gameInstance = UnityLoader.instantiate("unityContainer", {
-      dataUrl: buildUrl + "game.data.unityweb",
-      frameworkUrl: buildUrl + "game.asm.framework.unityweb",
-      codeUrl: buildUrl + "d8255148f741773487e81d776b407f14.wasm.unityweb"
-    }, { onProgress: UnityProgress });
+    const config = {
+      dataUrl: buildUrl + "/game.data.unityweb",
+      frameworkUrl: buildUrl + "/game.asm.framework.js.unityweb",
+      codeUrl: buildUrl + "/d8255148f741773487e81d776b407f14.wasm.unityweb",
+      streamingAssetsUrl: buildUrl + "/StreamingAssets",
+    };
 
-    // Sistema de progreso
-    function UnityProgress(gameInstance, progress) {
-      var loadingBox = document.getElementById("loadingBox");
-      var bar = document.getElementById("progressBarFull");
-      if (!loadingBox) return;
-      if (progress < 1) {
-        bar.style.width = (progress * 100) + "%";
-      } else {
-        loadingBox.style.display = "none"; // ocultar al terminar
+    let unityInstance = null;
+
+    const script = document.createElement("script");
+    script.src = loaderUrl;
+    script.onload = () => {
+      createUnityInstance(document.querySelector("#unity-canvas"), config, (progress) => {
+        console.log("Cargando: " + (progress * 100).toFixed(1) + "%");
+      }).then((instance) => {
+        unityInstance = instance;
+        console.log("Juego cargado 🎮");
+      }).catch((err) => {
+        console.error(err);
+      });
+    };
+    document.body.appendChild(script);
+
+    // Slider de sensibilidad
+    const slider = document.getElementById('sensSlider');
+    slider.addEventListener('input', () => {
+      const value = parseFloat(slider.value);
+      if (unityInstance) {
+        unityInstance.SendMessage("PlayerController", "SetSensitivity", value);
+        console.log("Sensibilidad enviada:", value);
       }
-    }
+    });
   </script>
 </body>
 </html>
